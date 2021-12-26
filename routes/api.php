@@ -8,8 +8,7 @@ use App\Http\Controllers\PenggunaController;
 use App\Http\Controllers\SatuanController;
 use App\Http\Controllers\StokController;
 use App\Http\Controllers\VoucherController;
-use App\Models\Pengguna;
-use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,6 +49,7 @@ Route::group(['middleware' => ['jwt.verify']], function () {
         Route::post('/', [OrderController::class, 'create']);
         Route::post('/ubah-status', [OrderController::class, 'changeStatus']);
         Route::get('/find/{id}', [OrderController::class, 'byID']);
+        Route::get('count/{status}', [OrderController::class, 'count']);
     });
 
     Route::group(['prefix' => '/user'], function () {
@@ -82,6 +82,7 @@ Route::group(['middleware' => ['jwt.verify']], function () {
         Route::post('/byID', [StokController::class, 'byID']);
     });
     Route::group(['prefix' => '/voucher'], function () {
+        Route::get('/poin/{idPengguna}', [VoucherController::class, 'poinPengguna']);
         Route::post('/', [VoucherController::class, 'create']);
         Route::patch('/', [VoucherController::class, 'update']);
         Route::delete('/', [VoucherController::class, 'delete']);
@@ -92,3 +93,5 @@ Route::group(['middleware' => ['jwt.verify']], function () {
         Route::delete('/', [MenuController::class, 'delete']);
     });
 });
+Route::post('webhook', [OrderController::class, 'webhook']);
+Route::get('/payment', [OrderController::class, 'createPayment']);

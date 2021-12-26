@@ -17,7 +17,8 @@ class Order extends Model
         'sub_total',
         'diskon',
         'total',
-        'tipe'
+        'tipe',
+        'snap_token'
     ];
 
     public function detailOrder()
@@ -26,7 +27,7 @@ class Order extends Model
     }
     public function statusOrder()
     {
-        return $this->hasMany(StatusOrder::class, 'id_order', 'id');
+        return $this->hasMany(StatusOrder::class, 'id_order', 'id')->latest();
     }
     public function voucherOrder()
     {
