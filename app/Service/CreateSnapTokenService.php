@@ -31,6 +31,15 @@ class CreateSnapTokenService extends Midtrans
             'phone' => $customer->no_hp,
 
         ];
+        $voucher = $this->order->voucherOrder;
+        if ($voucher) {
+            $itemDetails[] = [
+                'id' => 'voucher-' . $voucher->voucher->id,
+                'price' => -$voucher->voucher->diskon,
+                'quantity' => 1,
+                'name' => $voucher->voucher->label,
+            ];
+        }
         $params = [
             'transaction_details' => [
                 'order_id' => $this->order->id,
@@ -39,7 +48,6 @@ class CreateSnapTokenService extends Midtrans
             'item_details' => $itemDetails,
             'customer_details' => $customerDetail,
         ];
-
         $snapToken = Snap::getSnapToken($params);
 
         return $snapToken;
