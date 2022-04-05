@@ -11,6 +11,8 @@ use App\Models\StatusOrder;
 use App\Models\Stok;
 use App\Models\Voucher;
 use App\Models\VoucherOrder;
+use App\Service\BroadcastService;
+use App\Service\BroadcastUtils;
 use App\Service\CreateSnapTokenService;
 use Exception;
 use Illuminate\Foundation\Auth\User;
@@ -18,6 +20,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use League\CommonMark\Node\Query\OrExpr;
 
 class OrderController extends Controller
 {
@@ -31,11 +34,14 @@ class OrderController extends Controller
     public function index(Request $request)
 
     {
+        $start = $request->start ?? date('Y-m-1 00:00:00');
+        $end = $request->end ?? date('Y-m-d 23:59:59');
         $status = $request->status ?? 'diproses';
         $idPengguna = $request->idPengguna;
         $data = Order::select('order.*')
             ->join('status_order', 'status_order.id', '=', DB::raw('(SELECT id FROM status_order AS s2 WHERE s2.id_order = order.id ORDER BY created_at DESC LIMIT 1)'))
-            ->with('statusOrder', 'detailOrder.menu.satuan', 'voucherOrder.voucher', 'pengguna.riwayatPoin')->orderBy('order.created_at', 'desc');
+            ->with('statusOrder', 'detailOrder.menu.satuan', 'voucherOrder.voucher', 'pengguna.riwayatPoin')->orderBy('order.created_at', 'desc')
+            ->whereBetween('order.created_at', [$start, $end]);
         if ($status == 'diproses') {
             $data = $data->whereIn('status_order.status', ['diproses', 'reschedule']);
         } else if ($status == 'selesai') {
@@ -152,20 +158,15 @@ class OrderController extends Controller
                 'id_order' => $order->id,
                 'status' => 'diproses'
             ]);
-            $poin = floor($total / 100000);
-            if ($poin > 0) {
-                $user = Pengguna::find($request->id_pengguna);
-                $user->update([
-                    'poin' => $user->poin + $poin
-                ]);
-                RiwayatPoin::create([
-                    'id_pengguna' => $request->id_pengguna,
-                    'nominal' => $poin,
-                    'tipe' => 'plus',
-                ]);
+            // DB::rollBack();
+            BroadcastService::sendNotif('idUser', $order->id_pengguna, 'Order', 'Order Berhasil', 'Pesanan anda sedang diproses');
+            BroadcastService::saveNotifikasi($order->id_pengguna, 'Pesanan anda sedang diproses', json_encode(['id_order' => $order->id]), 'Order');
+            $users = Pengguna::where('role', 'admin')->get();
+            foreach ($users as $user) {
+                BroadcastService::sendNotif('idUser', $user->id, 'Order', 'Pesanan Baru', 'Ada pesanan baru');
+                BroadcastService::saveNotifikasi($user->id, 'Ada pesanan baru', json_encode(['id_order' => $order->id]), 'Order');
             }
             DB::commit();
-
             return response()->json([
                 'success' => true,
                 'message' => "Order Berhasil Dilakukan",
@@ -203,7 +204,7 @@ class OrderController extends Controller
                 'tanggal' => $request->tanggal
             ]);
 
-            Order::where('id', $request->id_order)->update([
+            $order = Order::where('id', $request->id_order)->update([
                 'jam' => $request->jam,
                 'tanggal' => $request->tanggal
             ]);
@@ -213,7 +214,23 @@ class OrderController extends Controller
                 'status' => $request->status,
             ]);
         }
-
+        if ($request->status == 'selesai') {
+            $poin = floor($order->total / 100000);
+            $order = Order::find($request->id_order);
+            BroadcastService::sendNotif('idUser', $order->id_pengguna, 'Order', 'Pesanan Selesai', 'Pesanan anda sudah selesai, Terima Kasih');
+            BroadcastService::saveNotifikasi($order->id_pengguna, 'Pesanan anda sudah selesai, Terima Kasih', json_encode(['id_order' => $order->id]), 'Order');
+            if ($poin > 0) {
+                $user = Pengguna::find($order->id_pengguna);
+                $user->update([
+                    'poin' => $user->poin + $poin
+                ]);
+                RiwayatPoin::create([
+                    'id_pengguna' => $order->id_pengguna,
+                    'nominal' => $poin,
+                    'tipe' => 'plus',
+                ]);
+            }
+        }
         return response()->json([
             'success' => true,
             'message' => "Status Order Berhasil Diubah"
@@ -236,12 +253,26 @@ class OrderController extends Controller
     {
         if ($request->transaction_status == 'capture' || $request->transaction_status == 'settlement') {
             $order = Order::find($request->order_id);
+            BroadcastService::sendNotif('idUser', $order->id_pengguna, 'Order', 'Pembayaran Berhasil', 'Pembayaran anda berhasil');
+            BroadcastService::saveNotifikasi($order->id_pengguna, 'Pembayaran anda berhasil', json_encode(['id_order' => $order->id]), 'Order');
+            $users = Pengguna::where('role', 'admin')->get();
+            foreach ($users as $user) {
+                BroadcastService::sendNotif('idUser', $user->id, 'Order', 'Pesanan Dibayar', 'Ada pesanan yang sudah dibayar');
+                BroadcastService::saveNotifikasi($user->id, 'Ada pesanan yang sudah dibayar', json_encode(['id_order' => $order->id]), 'Order');
+            }
             StatusOrder::create([
                 'id_order' => $order->id,
                 'status' => 'sudah bayar',
             ]);
         } else if ($request->transaction_status == 'deny' || $request->transaction_status == 'cancel' || $request->transaction_status == 'expire') {
             $order = Order::find($request->order_id);
+            BroadcastService::sendNotif('idUser', $order->id_pengguna, 'Order', 'Pesanan dibatalkan', 'Pesanan anda dibatalkan');
+            BroadcastService::saveNotifikasi($order->id_pengguna, 'Ada pesanan yang sudah dibayar', json_encode(['id_order' => $order->id]), 'Order');
+            $users = Pengguna::where('role', 'admin')->get();
+            foreach ($users as $user) {
+                BroadcastService::sendNotif('idUser', $user->id, 'Order', 'Pesanan Dibatalkan', 'Ada pesanan yang dibatalkan');
+                BroadcastService::saveNotifikasi($user->id, 'Ada pesanan yang dibatalkan', json_encode(['id_order' => $order->id]), 'Order');
+            }
             StatusOrder::create([
                 'id_order' => $order->id,
                 'status' => 'dibatalkan',

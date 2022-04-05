@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\KonfigurasiController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PenggunaController;
 use App\Http\Controllers\SatuanController;
@@ -56,6 +57,8 @@ Route::group(['middleware' => ['jwt.verify']], function () {
         Route::get('/', [PenggunaController::class, 'index']);
         Route::delete('/', [PenggunaController::class, 'delete']);
         Route::get('/all', [PenggunaController::class, 'allData']);
+        Route::get('/notifikasi/{idUser}', [NotifikasiController::class, 'getByUser']);
+        Route::get('/notifikasi/baca/{id}', [NotifikasiController::class, 'update']);
     });
     Route::group(['prefix' => '/satuan'], function () {
         Route::get('/', [SatuanController::class, 'index']);

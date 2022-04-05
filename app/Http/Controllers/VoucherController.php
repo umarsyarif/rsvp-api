@@ -44,13 +44,16 @@ class VoucherController extends Controller
         ], 200);
     }
 
-    public function allData()
+    public function allData(Request $request)
     {
-        $data = Voucher::get();
+        $data = Voucher::latest();
+        if ($request->active != null) {
+            $data = $data->where('is_active', 1);
+        }
         return response()->json([
             'success' => true,
             'message' => 'Data Semua Voucher',
-            'data' => $data
+            'data' => $data->get()
         ], 200);
     }
 

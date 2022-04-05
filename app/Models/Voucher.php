@@ -12,7 +12,8 @@ class Voucher extends Model
     protected $fillable = [
         'label',
         'foto',
-        'diskon'
+        'diskon',
+        'is_active'
     ];
 
     public function voucherOrder()

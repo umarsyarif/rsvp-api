@@ -15,7 +15,8 @@ class Menu extends Model
         'harga',
         'diskon',
         'id_satuan',
-        'tipe'
+        'tipe',
+        'is_active'
     ];
 
     public function satuan()
