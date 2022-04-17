@@ -10,7 +10,7 @@ class NotifikasiController extends Controller
     //
     public function getByUser($idUser)
     {
-        $notifikasi = NotifikasiUser::where([['id_user', $idUser], ['seen', 0]])->get();
+        $notifikasi = NotifikasiUser::where([['id_user', $idUser]])->latest()->get();
         return response()->json([
             'success' => true,
             'message' => "data notifikasi",

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FileStorageController;
 use App\Http\Controllers\KonfigurasiController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\NotifikasiController;
@@ -29,7 +30,7 @@ Route::group(['middleware' => 'api'], function () {
 });
 Route::group(['middleware' => ['jwt.verify']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-
+    Route::post('/file/upload', [FileStorageController::class, 'store']);
     Route::group(['prefix' => '/user'], function () {
         Route::post('/byID', [PenggunaController::class, 'byID']);
         Route::post('/', [PenggunaController::class, 'create']);
@@ -59,6 +60,7 @@ Route::group(['middleware' => ['jwt.verify']], function () {
         Route::get('/all', [PenggunaController::class, 'allData']);
         Route::get('/notifikasi/{idUser}', [NotifikasiController::class, 'getByUser']);
         Route::get('/notifikasi/baca/{id}', [NotifikasiController::class, 'update']);
+        Route::get('/poin/{id}', [PenggunaController::class, 'getPoin']);
     });
     Route::group(['prefix' => '/satuan'], function () {
         Route::get('/', [SatuanController::class, 'index']);

@@ -29,6 +29,6 @@ class Menu extends Model
     }
     public function stok()
     {
-        return $this->belongsTo(Stok::class, 'id_menu', 'id');
+        return $this->belongsTo(Stok::class, 'id', 'id_menu');
     }
 }

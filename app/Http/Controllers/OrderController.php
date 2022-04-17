@@ -61,7 +61,7 @@ class OrderController extends Controller
 
     public function byID($id)
     {
-        $data = Order::where('id', $id)->with('statusOrder', 'detailOrder.menu.satuan', 'voucherOrder.voucher', 'pengguna.riwayatPoin')->first();
+        $data = Order::where('id', $id)->with('statusOrder', 'detailOrder.menu.satuan', 'poinOrder', 'voucherOrder.voucher', 'pengguna.riwayatPoin')->first();
         if ($data == null) {
             return response()->json([
                 'success' => false,
@@ -105,7 +105,6 @@ class OrderController extends Controller
                 'tanggal' => $request->tanggal,
                 'tipe' => $request->tipe,
             ]);
-
             $subTotal = 0;
             foreach ($request->id_menu as $key => $menu) {
                 $dataMenu = Menu::where('id', $menu)->first();
@@ -128,10 +127,6 @@ class OrderController extends Controller
                         'success' => false,
                         'message' => "Stok tidak cukup"
                     ], 422);
-                } else {
-                    Stok::where('id_menu', $menu)->update([
-                        'jumlah' => $kurang,
-                    ]);
                 }
             }
 
@@ -147,7 +142,22 @@ class OrderController extends Controller
                 $diskon = 0;
                 $total = $subTotal;
             }
-
+            $pengguna = Pengguna::find($request->id_pengguna);
+            if ($request->poin > $pengguna->poin) {
+                throw (new Exception("Poin tidak cukup"));
+            }
+            $pengguna->update([
+                'poin' => $pengguna->poin - $request->poin
+            ]);
+            if ($request->poin > 0) {
+                RiwayatPoin::create([
+                    'id_pengguna' => $order->id_pengguna,
+                    'nominal' => $request->poin,
+                    'tipe' => 'minus',
+                    'id_order' => $order->id
+                ]);
+                $total = $total - $request->poin * 10000;
+            }
             Order::where('id', $order->id)->update([
                 'subtotal' => $subTotal,
                 'diskon' => $diskon,
@@ -184,57 +194,73 @@ class OrderController extends Controller
 
     public function changeStatus(Request $request)
     {
-        $validator = Validator::make(request()->all(), [
-            'id_order' => 'required',
-            'status' => 'required|in:selesai,dibatalkan,reschedule,sudah bayar',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ], 422);
-        }
-
-        if ($request->status == 'reschedule') {
-            StatusOrder::create([
-                'id_order' => $request->id_order,
-                'status' => $request->status,
-                'jam' => $request->jam,
-                'tanggal' => $request->tanggal
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make(request()->all(), [
+                'id_order' => 'required',
+                'status' => 'required|in:selesai,dibatalkan,reschedule,sudah bayar',
             ]);
 
-            $order = Order::where('id', $request->id_order)->update([
-                'jam' => $request->jam,
-                'tanggal' => $request->tanggal
-            ]);
-        } else {
-            StatusOrder::create([
-                'id_order' => $request->id_order,
-                'status' => $request->status,
-            ]);
-        }
-        if ($request->status == 'selesai') {
-            $poin = floor($order->total / 100000);
-            $order = Order::find($request->id_order);
-            BroadcastService::sendNotif('idUser', $order->id_pengguna, 'Order', 'Pesanan Selesai', 'Pesanan anda sudah selesai, Terima Kasih');
-            BroadcastService::saveNotifikasi($order->id_pengguna, 'Pesanan anda sudah selesai, Terima Kasih', json_encode(['id_order' => $order->id]), 'Order');
-            if ($poin > 0) {
-                $user = Pengguna::find($order->id_pengguna);
-                $user->update([
-                    'poin' => $user->poin + $poin
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                ], 422);
+            }
+            if ($request->status == 'reschedule') {
+                StatusOrder::create([
+                    'id_order' => $request->id_order,
+                    'status' => $request->status,
+                    'jam' => $request->jam,
+                    'tanggal' => $request->tanggal
                 ]);
-                RiwayatPoin::create([
-                    'id_pengguna' => $order->id_pengguna,
-                    'nominal' => $poin,
-                    'tipe' => 'plus',
+
+                $order = Order::where('id', $request->id_order)->update([
+                    'jam' => $request->jam,
+                    'tanggal' => $request->tanggal
+                ]);
+            } else {
+                StatusOrder::create([
+                    'id_order' => $request->id_order,
+                    'status' => $request->status,
                 ]);
             }
+            if ($request->status == 'selesai') {
+                $order = Order::find($request->id_order);
+                $poin = floor($order->total / 100000);
+                BroadcastService::sendNotif('idUser', $order->id_pengguna, 'Order', 'Pesanan Selesai', 'Pesanan anda sudah selesai, Terima Kasih');
+                BroadcastService::saveNotifikasi($order->id_pengguna, 'Pesanan anda sudah selesai, Terima Kasih', json_encode(['id_order' => $order->id]), 'Order');
+                foreach ($order->detailOrder as $item) {
+                    $stok = Stok::where('id_menu', $item->id_menu)->first();
+                    $kurang = $stok->jumlah - $item->jumlah;
+                    Stok::where('id_menu', $item->id_menu)->update([
+                        'jumlah' => $kurang,
+                    ]);
+                }
+                if ($poin > 0) {
+                    $user = Pengguna::find($order->id_pengguna);
+                    $user->update([
+                        'poin' => $user->poin + $poin
+                    ]);
+                    RiwayatPoin::create([
+                        'id_pengguna' => $order->id_pengguna,
+                        'nominal' => $poin,
+                        'tipe' => 'plus',
+                    ]);
+                }
+            }
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => "Status Order Berhasil Diubah"
+            ], 200);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
-        return response()->json([
-            'success' => true,
-            'message' => "Status Order Berhasil Diubah"
-        ], 200);
     }
     public function createPayment(Request $request)
     {

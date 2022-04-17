@@ -29,7 +29,7 @@ class CreateSnapTokenService extends Midtrans
             'first_name' => $customer->nama,
             'email' => $customer->email,
             'phone' => $customer->no_hp,
-
+            'address' => $customer->alamat,
         ];
         $voucher = $this->order->voucherOrder;
         if ($voucher) {
@@ -38,6 +38,15 @@ class CreateSnapTokenService extends Midtrans
                 'price' => -$voucher->voucher->diskon,
                 'quantity' => 1,
                 'name' => $voucher->voucher->label,
+            ];
+        }
+        $poinOrder = $this->order->poinOrder;
+        if ($poinOrder) {
+            $itemDetails[] = [
+                'id' => 'poin-' . $poinOrder->id,
+                'price' => -$poinOrder->nominal * 10000,
+                'quantity' => 1,
+                'name' => 'Redeem Poin',
             ];
         }
         $params = [

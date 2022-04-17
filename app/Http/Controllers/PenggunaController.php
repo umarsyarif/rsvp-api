@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Validator;
 class PenggunaController extends Controller
 {
     protected $user;
- 
+
     public function __construct()
     {
         $this->user = JWTAuth::parseToken()->authenticate();
@@ -29,7 +29,8 @@ class PenggunaController extends Controller
         ], 200);
     }
 
-    public function allData(){
+    public function allData()
+    {
         $data = Pengguna::with('riwayatPoin', 'order.detailOrder.menu.satuan', 'order.statusOrder', 'order.voucherOrder.voucher')->get();
         return response()->json([
             'success' => true,
@@ -37,11 +38,28 @@ class PenggunaController extends Controller
             'data' => $data
         ], 200);
     }
-    
+
+    public function getPoin($id)
+    {
+        $pengguna = Pengguna::find($id);
+        if (!$pengguna) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ID Not Found',
+            ], 404);
+        } else {
+            return response()->json([
+                'success' => true,
+                'message' => 'Data Pengguna By ID',
+                'data' => $pengguna->poin
+            ]);
+        }
+    }
+
     public function byID(Request $request)
     {
         $data = Pengguna::where('id', $request->id)->with('riwayatPoin', 'order.detailOrder.menu.satuan', 'order.statusOrder', 'order.voucherOrder.voucher')->first();
-        if($data == null){
+        if ($data == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'ID Not Found',
@@ -72,7 +90,7 @@ class PenggunaController extends Controller
             'alamat' => 'required',
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => $validator->errors()->first(),
@@ -100,7 +118,7 @@ class PenggunaController extends Controller
     {
         $data = Pengguna::where('id', $request->id)->first();
 
-        if($data == null){
+        if ($data == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'ID Not Found',
@@ -119,7 +137,7 @@ class PenggunaController extends Controller
     {
         $data = Pengguna::where('id', $request->id)->first();
 
-        if($data == null){
+        if ($data == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'ID Not Found',

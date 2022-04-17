@@ -36,7 +36,7 @@ class VoucherController extends Controller
                 'message' => 'ID Not Found',
             ], 404);
         }
-        $poin = RiwayatPoin::where('id_pengguna', $idPengguna)->get();
+        $poin = RiwayatPoin::where('id_pengguna', $idPengguna)->latest()->get();
         return response()->json([
             'success' => true,
             'message' => 'Data Poin Pengguna',

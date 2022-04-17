@@ -13,6 +13,7 @@ class RiwayatPoin extends Model
         'id_pengguna',
         'nominal',
         'tipe',
+        'id_order',
     ];
 
     public function pengguna()

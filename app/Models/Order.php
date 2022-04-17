@@ -37,4 +37,8 @@ class Order extends Model
     {
         return $this->belongsTo(Pengguna::class, 'id_pengguna', 'id');
     }
+    public function poinOrder()
+    {
+        return $this->hasOne(RiwayatPoin::class, 'id_order', 'id');
+    }
 }

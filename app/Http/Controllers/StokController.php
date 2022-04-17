@@ -10,7 +10,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class StokController extends Controller
 {
     protected $user;
- 
+
     public function __construct()
     {
         $this->user = JWTAuth::parseToken()->authenticate();
@@ -35,11 +35,11 @@ class StokController extends Controller
             'data' => $data
         ], 200);
     }
-    
+
     public function byID(Request $request)
     {
         $data = Stok::where('id', $request->id)->with('menu.satuan')->first();
-        if($data == null){
+        if ($data == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'ID Not Found',
@@ -59,7 +59,7 @@ class StokController extends Controller
             'jumlah' => 'required',
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => $validator->errors()->first(),
@@ -67,12 +67,12 @@ class StokController extends Controller
         }
 
         $stok = Stok::where('id_menu', $request->id_menu)->first();
-        if($stok == null){
+        if ($stok == null) {
             Stok::create([
                 'id_menu' => $request->id_menu,
                 'jumlah' => $request->jumlah,
             ]);
-        }else{
+        } else {
             $total = $stok->jumlah + $request->jumlah;
             Stok::where('id_menu', $request->id_menu)->update([
                 'jumlah' => $total
@@ -87,9 +87,9 @@ class StokController extends Controller
 
     public function update(Request $request)
     {
-        $data = Stok::where('id', $request->id)->first();
+        $data = Stok::where('id_menu', $request->id)->first();
 
-        if($data == null){
+        if ($data == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'ID Not Found',
@@ -107,7 +107,7 @@ class StokController extends Controller
     {
         $data = Stok::where('id', $request->id)->first();
 
-        if($data == null){
+        if ($data == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'ID Not Found',
