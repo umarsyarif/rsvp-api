@@ -35,7 +35,7 @@ class CreateSnapTokenService extends Midtrans
         if ($voucher) {
             $itemDetails[] = [
                 'id' => 'voucher-' . $voucher->voucher->id,
-                'price' => -$voucher->voucher->diskon,
+                'price' => - (($voucher->voucher->diskon * $this->order->subtotal) / 100),
                 'quantity' => 1,
                 'name' => $voucher->voucher->label,
             ];

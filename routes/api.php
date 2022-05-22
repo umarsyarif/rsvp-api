@@ -7,6 +7,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PenggunaController;
+use App\Http\Controllers\RatController;
 use App\Http\Controllers\SatuanController;
 use App\Http\Controllers\StokController;
 use App\Http\Controllers\VoucherController;
@@ -96,6 +97,11 @@ Route::group(['middleware' => ['jwt.verify']], function () {
         Route::post('/', [MenuController::class, 'create']);
         Route::patch('/', [MenuController::class, 'update']);
         Route::delete('/', [MenuController::class, 'delete']);
+    });
+    Route::group(['prefix' => '/rating'], function () {
+        Route::get('/', [RatController::class, 'index']);
+        Route::post('/', [RatController::class, 'create']);
+        Route::get('/check/{id}', [RatController::class, 'check']);
     });
 });
 Route::post('webhook', [OrderController::class, 'webhook']);

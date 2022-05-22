@@ -14,6 +14,7 @@ use App\Models\VoucherOrder;
 use App\Service\BroadcastService;
 use App\Service\BroadcastUtils;
 use App\Service\CreateSnapTokenService;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Foundation\Auth\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -40,12 +41,11 @@ class OrderController extends Controller
         $idPengguna = $request->idPengguna;
         $data = Order::select('order.*')
             ->join('status_order', 'status_order.id', '=', DB::raw('(SELECT id FROM status_order AS s2 WHERE s2.id_order = order.id ORDER BY created_at DESC LIMIT 1)'))
-            ->with('statusOrder', 'detailOrder.menu.satuan', 'voucherOrder.voucher', 'pengguna.riwayatPoin')->orderBy('order.created_at', 'desc')
-            ->whereBetween('order.created_at', [$start, $end]);
+            ->with('statusOrder', 'detailOrder.menu.satuan', 'voucherOrder.voucher', 'pengguna.riwayatPoin')->orderBy('order.created_at', 'desc');
         if ($status == 'diproses') {
             $data = $data->whereIn('status_order.status', ['diproses', 'reschedule']);
         } else if ($status == 'selesai') {
-            $data = $data->whereIn('status_order.status', ['selesai', 'dibatalkan']);
+            $data = $data->whereIn('status_order.status', ['selesai', 'dibatalkan'])->whereBetween('order.created_at', [$start, $end]);
         } else {
             $data = $data->where('status_order.status', $status);
         }
@@ -132,7 +132,7 @@ class OrderController extends Controller
 
             if ($request->id_voucher != "-") {
                 $voucher = Voucher::where('id', $request->id_voucher)->first();
-                $diskon = $voucher->diskon;
+                $diskon = ($voucher->diskon  * $subTotal) / 100;
                 $total = $subTotal - $diskon;
                 VoucherOrder::create([
                     'id_order' => $order->id,
