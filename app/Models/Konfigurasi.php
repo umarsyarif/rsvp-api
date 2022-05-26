@@ -11,6 +11,7 @@ class Konfigurasi extends Model
     protected $table = 'konfigurasi';
     protected $fillable = [
         'buka',
-        'tutup'
+        'tutup',
+        'jumlah_kursi'
     ];
 }

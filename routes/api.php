@@ -53,6 +53,7 @@ Route::group(['middleware' => ['jwt.verify']], function () {
         Route::post('/ubah-status', [OrderController::class, 'changeStatus']);
         Route::get('/find/{id}', [OrderController::class, 'byID']);
         Route::get('count/{status}', [OrderController::class, 'count']);
+        Route::post('/check-seat', [OrderController::class, 'checkSeat']);
     });
 
     Route::group(['prefix' => '/user'], function () {

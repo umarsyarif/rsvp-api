@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DetailOrder;
+use App\Models\Konfigurasi;
 use App\Models\Menu;
 use App\Models\Order;
 use App\Models\Pengguna;
@@ -326,5 +327,24 @@ class OrderController extends Controller
             'message' => 'count Order',
             'data' => (int) $data->count()
         ], 200);
+    }
+    public function checkSeat(Request $request)
+    {
+        $order = Order::whereDate('created_at', $request->date)->get();
+        $countSeat = $order->map(function ($item) {
+            return $item->jumlah_orang;
+        })->sum();
+        $konfigurasi = Konfigurasi::find(1);
+        if ($konfigurasi->jumlah_kursi > ($countSeat + $request->jumlah_orang)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'seat tersedia',
+            ], 200);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'seat tidak tersedia',
+            ], 200);
+        }
     }
 }
